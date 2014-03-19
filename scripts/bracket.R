@@ -1,0 +1,112 @@
+# create a bracket from a submission file
+source('settings.R')
+
+slots <- subset(read.csv(sprintf('%s/tourney_slots.csv', data.dir), as.is=T), season=="S")
+seeds <- subset(read.csv(sprintf('%s/tourney_seeds.csv', data.dir), as.is=T), season=="S")
+teams <- read.csv(sprintf('%s/teams.csv', data.dir), as.is=T)
+submission <- read.csv(sprintf('%s/submission-1.csv', submission.dir), as.is=T)
+
+slots <- cbind(slots, winner=NA)
+
+get.team <- function (id) {
+    ifelse(id %in% slots$slot,
+           subset(slots, slot==id)$winner,
+           subset(seeds, seed==id)$team)
+}
+
+for (i in 1:nrow(slots)) {
+    game <- slots[i,]
+    t1 <- get.team(game$strongseed)
+    t2 <- get.team(game$weakseed)
+    pval <- ifelse(t1 < t2,
+                   subset(submission, id==paste(game$season, t1, t2, sep="_"))$pred,
+                   1-subset(submission, id==paste(game$season, t2, t1, sep="_"))$pred)
+    winner <- ifelse(pval==0.5,
+                     sample(c(t1, t2), 1),
+                     ifelse(pval>0.50, t1, t2))
+    slots$winner[which(slots$slot==game$slot)] <- winner
+}
+
+slots$strongseed <- sapply(slots$strongseed, get.team)
+slots$weakseed <- sapply(slots$weakseed, get.team)
+
+get.team.names <- function (col) {
+    teams$name[match(col, teams$id)]
+}
+slots$strongseed <- get.team.names(slots$strongseed)
+slots$weakseed <- get.team.names(slots$weakseed)
+slots$winner <- get.team.names(slots$winner)
+
+sink(sprintf('%s/bracket.txt', root.dir))
+slots
+sink()
+
+##      season slot      strongseed        weakseed          winner
+## 1157      S  X16       Albany NY    Mt St Mary's    Mt St Mary's
+## 1158      S  Y11            Iowa       Tennessee            Iowa
+## 1159      S  Y12        NC State          Xavier        NC State
+## 1160      S  Y16    Cal Poly SLO     TX Southern     TX Southern
+## 1161      S R1W1        Virginia     Coastal Car        Virginia
+## 1162      S R1W2       Villanova    WI Milwaukee       Villanova
+## 1163      S R1W3         Iowa St      NC Central         Iowa St
+## 1164      S R1W4     Michigan St        Delaware     Michigan St
+## 1165      S R1W5      Cincinnati         Harvard      Cincinnati
+## 1166      S R1W6  North Carolina      Providence  North Carolina
+## 1167      S R1W7     Connecticut  St Joseph's PA     Connecticut
+## 1168      S R1W8         Memphis    G Washington         Memphis
+## 1169      S R1X1         Florida    Mt St Mary's         Florida
+## 1170      S R1X2          Kansas      E Kentucky          Kansas
+## 1171      S R1X3        Syracuse      W Michigan        Syracuse
+## 1172      S R1X4            UCLA           Tulsa            UCLA
+## 1173      S R1X5 VA Commonwealth       SF Austin VA Commonwealth
+## 1174      S R1X6         Ohio St          Dayton         Ohio St
+## 1175      S R1X7      New Mexico        Stanford      New Mexico
+## 1176      S R1X8        Colorado      Pittsburgh        Colorado
+## 1177      S R1Y1      Wichita St     TX Southern      Wichita St
+## 1178      S R1Y2        Michigan         Wofford        Michigan
+## 1179      S R1Y3            Duke          Mercer            Duke
+## 1180      S R1Y4      Louisville       Manhattan      Louisville
+## 1181      S R1Y5        St Louis        NC State        St Louis
+## 1182      S R1Y6   Massachusetts            Iowa   Massachusetts
+## 1183      S R1Y7           Texas      Arizona St           Texas
+## 1184      S R1Y8        Kentucky       Kansas St        Kentucky
+## 1185      S R1Z1         Arizona        Weber St         Arizona
+## 1186      S R1Z2       Wisconsin   American Univ       Wisconsin
+## 1187      S R1Z3       Creighton             ULL       Creighton
+## 1188      S R1Z4    San Diego St   New Mexico St    San Diego St
+## 1189      S R1Z5        Oklahoma     N Dakota St        Oklahoma
+## 1190      S R1Z6          Baylor        Nebraska          Baylor
+## 1191      S R1Z7          Oregon             BYU          Oregon
+## 1192      S R1Z8         Gonzaga     Oklahoma St         Gonzaga
+## 1193      S R2W1        Virginia         Memphis        Virginia
+## 1194      S R2W2       Villanova     Connecticut       Villanova
+## 1195      S R2W3         Iowa St  North Carolina         Iowa St
+## 1196      S R2W4     Michigan St      Cincinnati     Michigan St
+## 1197      S R2X1         Florida        Colorado         Florida
+## 1198      S R2X2          Kansas      New Mexico          Kansas
+## 1199      S R2X3        Syracuse         Ohio St        Syracuse
+## 1200      S R2X4            UCLA VA Commonwealth            UCLA
+## 1201      S R2Y1      Wichita St        Kentucky      Wichita St
+## 1202      S R2Y2        Michigan           Texas        Michigan
+## 1203      S R2Y3            Duke   Massachusetts            Duke
+## 1204      S R2Y4      Louisville        St Louis      Louisville
+## 1205      S R2Z1         Arizona         Gonzaga         Arizona
+## 1206      S R2Z2       Wisconsin          Oregon       Wisconsin
+## 1207      S R2Z3       Creighton          Baylor       Creighton
+## 1208      S R2Z4    San Diego St        Oklahoma    San Diego St
+## 1209      S R3W1        Virginia     Michigan St        Virginia
+## 1210      S R3W2       Villanova         Iowa St       Villanova
+## 1211      S R3X1         Florida            UCLA         Florida
+## 1212      S R3X2          Kansas        Syracuse          Kansas
+## 1213      S R3Y1      Wichita St      Louisville      Wichita St
+## 1214      S R3Y2        Michigan            Duke            Duke
+## 1215      S R3Z1         Arizona    San Diego St         Arizona
+## 1216      S R3Z2       Wisconsin       Creighton       Wisconsin
+## 1217      S R4W1        Virginia       Villanova        Virginia
+## 1218      S R4X1         Florida          Kansas         Florida
+## 1219      S R4Y1      Wichita St            Duke      Wichita St
+## 1220      S R4Z1         Arizona       Wisconsin         Arizona
+## 1221      S R5WX        Virginia         Florida         Florida
+## 1222      S R5YZ      Wichita St         Arizona         Arizona
+## 1223      S R6CH         Florida         Arizona         Arizona
+
